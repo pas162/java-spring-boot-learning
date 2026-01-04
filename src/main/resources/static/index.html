@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Task Manager</title>
+<style>
+body {
+	font-family: Arial, sans-serif;
+	padding: 20px;
+	max-width: 600px;
+	margin: auto;
+}
+
+.form-container {
+	background: #f4f4f4;
+	padding: 15px;
+	border-radius: 5px;
+	margin-bottom: 20px;
+}
+
+input {
+	padding: 8px;
+	margin-right: 5px;
+}
+
+li {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px;
+	border-bottom: 1px solid #ddd;
+}
+
+button {
+	cursor: pointer;
+	padding: 5px 10px;
+}
+
+.delete-btn {
+	background: #ff4d4d;
+	color: white;
+	border: none;
+	border-radius: 3px;
+}
+</style>
+</head>
+<body>
+
+	<h1>My Tasks ✅</h1>
+
+	<div class="form-container">
+		<input type="text" id="taskName" placeholder="What needs to be done?">
+		<select id="taskStatus">
+			<option value="Pending">Pending</option>
+			<option value="In Progress">In Progress</option>
+			<option value="Completed">Completed</option>
+		</select>
+		<button onclick="addTask()">➕ Add</button>
+	</div>
+	<div class="filter-container">
+		<label for="statusFilter">Filter by Status:</label> <select
+			id="statusFilter" onchange="filterTasks()">
+			<option value="">All Tasks</option>
+			<option value="Pending">Pending</option>
+			<option value="In Progress">In Progress</option>
+			<option value="Completed">Completed</option>
+		</select>
+	</div>
+	<ul id="taskList"></ul>
+	<script>
+        // 1. GET ALL: Fetch tasks from Backend
+        async function loadTasks() {
+            const response = await fetch('/api/tasks');
+            const tasks = await response.json();
+            const list = document.getElementById('taskList');
+            list.innerHTML = ''; 
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                	<div>
+	                    <input type="text" id="edit-name-${task.id}" value="${task.name}">
+	                    <select id="edit-status-${task.id}">
+	                        <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+	                        <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+	                        <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+	                    </select>
+                	</div>
+              		<div>
+                		<button onclick="updateTask(${task.id})" style="background:#4CAF50; color:white; border:none; border-radius:3px;">💾 Save</button>
+                		<button class="delete-btn" onclick="deleteTask(${task.id})">🗑️ Delete</button>
+            		</div>                
+            		`;
+                list.appendChild(li);
+            });
+        }
+
+        // 2. POST: Send new task to Backend
+        async function addTask() {
+            const nameEl = document.getElementById('taskName');
+            const statusEl = document.getElementById('taskStatus');
+
+            const newTask = {
+                name: nameEl.value,
+                status: statusEl.value
+            };
+
+            await fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newTask)
+            });
+
+            nameEl.value = '';
+            statusEl.value = '';
+            loadTasks();
+        }
+        
+        async function updateTask(id) {
+            const newName = document.getElementById(`edit-name-${id}`).value;
+            const newStatus = document.getElementById(`edit-status-${id}`).value;
+
+			const updatedTask = {
+			        name: newName,
+			        status: newStatus
+			    };
+
+            // 3. Send the PUT request to /api/tasks/{id}
+            await fetch('/api/tasks/' + id, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(updatedTask)
+            });
+
+            // 4. Reload to show the changes are saved in MySQL
+            loadTasks();
+        }
+
+        // 3. DELETE: Remove task via Backend
+        async function deleteTask(id) {
+            await fetch('/api/tasks/' + id, { method: 'DELETE' });
+            loadTasks();
+        }
+        
+        async function filterTasks() {
+            const status = document.getElementById('statusFilter').value;
+            let url = '/api/tasks';
+
+            // If a status is selected, we change the URL to use the filter endpoint
+            if (status !== "") {
+                url = `/api/tasks/filter?status=${status}`;
+            }
+
+            const response = await fetch(url);
+            const tasks = await response.json();
+            
+            // We reuse the same logic to display the tasks
+            displayTasks(tasks); 
+        }
+        
+        function displayTasks(tasks) {
+            const list = document.getElementById('taskList');
+            list.innerHTML = ''; // Clear the current list first
+
+            tasks.forEach(task => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div>
+                        <input type="text" id="edit-name-${task.id}" value="${task.name}">
+                        <select id="edit-status-${task.id}">
+                            <option value="Pending" ${task.status === 'Pending' ? 'selected' : ''}>Pending</option>
+                            <option value="In Progress" ${task.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Completed" ${task.status === 'Completed' ? 'selected' : ''}>Completed</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button onclick="updateTask(${task.id})" style="background:#4CAF50; color:white; border:none; border-radius:3px;">💾 Save</button>
+                        <button class="delete-btn" onclick="deleteTask(${task.id})">🗑️ Delete</button>
+                    </div>                
+                `;
+                list.appendChild(li);
+            });
+        }
+
+        // Initial Load
+        loadTasks();
+    </script>
+</body>
+</html>

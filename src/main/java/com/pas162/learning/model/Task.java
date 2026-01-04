@@ -15,7 +15,6 @@ public class Task {
 	private Long id;
 
 	private String name;
-	private String content;
 	private String status;
 
 	private LocalDateTime createAt;
@@ -39,14 +38,6 @@ public class Task {
 
 	public void setName(String name) {
 		this.name = name;
-	}
-
-	public String getContent() {
-		return content;
-	}
-
-	public void setContent(String content) {
-		this.content = content;
 	}
 
 	public String getStatus() {
